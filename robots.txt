@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /404.html
+Disallow: /not_used/
+Disallow: /other/
+Disallow: /others/
+
+Sitemap: https://marvini-digital-food-chain.web.app/sitemap.xml
