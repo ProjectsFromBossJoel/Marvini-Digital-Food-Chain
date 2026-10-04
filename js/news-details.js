@@ -9,6 +9,51 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
+function upsert(tag, key, keyVal, attr, value) {
+  let el = document.head.querySelector(`${tag}[${key}="${keyVal}"]`);
+  if (!el) { el = document.createElement(tag); el.setAttribute(key, keyVal); document.head.appendChild(el); }
+  el.setAttribute(attr, value);
+}
+
+function applyArticleSeo(post, id) {
+  const base = 'https://marvini-digital-food-chain.web.app/';
+  const url = `${base}news-details.html?id=${encodeURIComponent(id)}`;
+  const title = `${post.title} | M-Digital Food Chain`;
+  const desc = (post.excerpt || '').replace(/https?:\/\/\S+/g, '').replace(/\s+/g, ' ').trim().slice(0, 155);
+
+  document.title = title;
+  upsert('meta', 'name', 'description', 'content', desc);
+  upsert('link', 'rel', 'canonical', 'href', url);
+  upsert('meta', 'property', 'og:type', 'content', 'article');
+  upsert('meta', 'property', 'og:title', 'content', title);
+  upsert('meta', 'property', 'og:description', 'content', desc);
+  upsert('meta', 'property', 'og:url', 'content', url);
+  if (post.imageUrl) upsert('meta', 'property', 'og:image', 'content', post.imageUrl);
+  upsert('meta', 'name', 'twitter:card', 'content', post.imageUrl ? 'summary_large_image' : 'summary');
+
+  document.getElementById('articleLd')?.remove();
+  const ld = document.createElement('script');
+  ld.id = 'articleLd';
+  ld.type = 'application/ld+json';
+  ld.textContent = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'NewsArticle',
+    headline: post.title,
+    description: desc,
+    image: post.imageUrl ? [post.imageUrl] : undefined,
+    datePublished: post.dateISO, // convert your Firestore timestamp to ISO
+    author: { '@type': 'Organization', name: 'M-Digital Food Chain' },
+    publisher: { '@type': 'Organization', name: 'M-Digital Food Chain',
+      logo: { '@type': 'ImageObject', url: base + 'img/M-Digital%20Food%20Chain1.png' } },
+    mainEntityOfPage: url
+  });
+  document.head.appendChild(ld);
+}
+
+function markArticleNotFound() {
+  upsert('meta', 'name', 'robots', 'content', 'noindex');
+}
+
 // Escape first, then turn URLs into links, so AI or article text can never inject HTML.
 // Trailing punctuation stays outside the link.
 function linkify(text) {
@@ -37,6 +82,7 @@ const gridEl = document.getElementById("newsDetailGrid");
 const exploreListEl = document.getElementById("exploreMoreList");
 
 function showError() {
+  markArticleNotFound();
   loadingEl.style.display = "none";
   gridEl.style.display = "none";
   errorEl.style.display = "block";
@@ -72,6 +118,14 @@ function renderMainNews() {
       document.getElementById("newsDetailTitle").textContent = data.title || "Untitled";
       document.getElementById("newsDetailMeta").textContent = ts?.toDate ? longDateLabel(ts.toDate()) : "";
       document.getElementById("newsDetailBody").innerHTML = linkify(data.excerpt || "");
+
+      upsert('meta', 'name', 'robots', 'content', 'index, follow');
+      applyArticleSeo({
+        title: data.title || "News",
+        excerpt: data.excerpt,
+        imageUrl: data.imageUrl,
+        dateISO: ts?.toDate ? ts.toDate().toISOString() : undefined
+      }, currentId);
 
       loadingEl.style.display = "none";
       errorEl.style.display = "none";

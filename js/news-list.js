@@ -46,7 +46,7 @@ function renderCard(n) {
         <h3 class="news-title"><a href="${detailUrl}">${escapeHtml(n.title || "")}</a></h3>
         <p class="news-excerpt">${escapeHtml(shortExcerpt(n.excerpt))}</p>
         <div class="news-meta">
-          <time>${dateLabel}</time>
+          <time${ts?.toDate ? ` datetime="${ts.toDate().toISOString().slice(0, 10)}"` : ""}>${dateLabel}</time>
           <a href="${detailUrl}">Read more</a>
         </div>
       </div>
